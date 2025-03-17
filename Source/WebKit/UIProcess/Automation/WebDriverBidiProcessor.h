@@ -41,7 +41,8 @@ class WebAutomationSession;
 class WebDriverBidiProcessor final
     : public Inspector::FrontendChannel
     , public Inspector::BidiBrowserBackendDispatcherHandler
-    , public Inspector::BidiBrowsingContextBackendDispatcherHandler {
+    , public Inspector::BidiBrowsingContextBackendDispatcherHandler
+    , public Inspector::BidiScriptBackendDispatcherHandler {
     WTF_MAKE_TZONE_ALLOCATED(WebDriverBidiProcessor);
 public:
     explicit WebDriverBidiProcessor(WebAutomationSession&);
@@ -61,6 +62,9 @@ public:
     // Inspector::BidiBrowserBackendDispatcherHandler methods.
     Inspector::Protocol::ErrorStringOr<void> close() override;
 
+    // Inspector::BidiScriptBackendDispatcherHandler methods.
+    void callFunction(const String& functionDeclaration, bool awaitPromise, Ref<JSON::Object>&& target, RefPtr<JSON::Array>&& opt_arguments, std::optional<Inspector::Protocol::BidiScript::EvaluateResultOwnership>&&, RefPtr<JSON::Object>&& opt_serializationOptions, RefPtr<JSON::Object>&& opt_this, std::optional<bool>&& opt_userActivation, Inspector::CommandCallbackOf<Inspector::Protocol::BidiScript::EvaluateResultType, String, RefPtr<Inspector::Protocol::BidiScript::RemoteValue>, RefPtr<Inspector::Protocol::BidiScript::ExceptionDetails>>&&) override;
+
     // Event entry points called from the owning WebAutomationSession.
     void logEntryAdded(const String& level, const String& source, const String& message, double timestamp, const String& type, const String& method);
 
@@ -75,6 +79,7 @@ private:
 
     Ref<Inspector::BidiBrowserBackendDispatcher> m_browserDomainDispatcher;
     Ref<Inspector::BidiBrowsingContextBackendDispatcher> m_browsingContextDomainDispatcher;
+    Ref<Inspector::BidiScriptBackendDispatcher> m_scriptDomainDispatcher;
 
     std::unique_ptr<Inspector::BidiLogFrontendDispatcher> m_logDomainNotifier;
 };

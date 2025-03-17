@@ -54,6 +54,7 @@ WebDriverBidiProcessor::WebDriverBidiProcessor(WebAutomationSession& session)
     , m_backendDispatcher(BackendDispatcher::create(m_frontendRouter.copyRef()))
     , m_browserDomainDispatcher(BidiBrowserBackendDispatcher::create(m_backendDispatcher, this))
     , m_browsingContextDomainDispatcher(BidiBrowsingContextBackendDispatcher::create(m_backendDispatcher, this))
+    , m_scriptDomainDispatcher(BidiScriptBackendDispatcher::create(m_backendDispatcher, this))
     , m_logDomainNotifier(makeUnique<BidiLogFrontendDispatcher>(m_frontendRouter))
 {
     protectedFrontendRouter()->connectFrontend(*this);
@@ -111,7 +112,7 @@ void WebDriverBidiProcessor::sendMessageToFrontend(const String& message)
 }
 
 
-// MARK: Inspector::BrowsingContextDispatcherHandler methods.
+// MARK: Inspector::BidiBrowsingContextDispatcherHandler methods.
 
 void WebDriverBidiProcessor::navigate(const BrowsingContext& browsingContext, const String& url, std::optional<Inspector::Protocol::BidiBrowsingContext::ReadinessState>&&, CommandCallbackOf<String, String>&& callback)
 {
@@ -119,11 +120,13 @@ void WebDriverBidiProcessor::navigate(const BrowsingContext& browsingContext, co
     if (!session)
         ASYNC_FAIL_WITH_PREDEFINED_ERROR(InternalError);
 
-    ASYNC_FAIL_WITH_PREDEFINED_ERROR(NotImplemented);
+    session->navigateBrowsingContext(browsingContext, url, std::nullopt, std::nullopt, [url, callback = WTFMove(callback)](Inspector::CommandResult<void>&& result) {
+        callback({ { url, "bogus_navigation_id"_s } });
+    });
 }
 
 
-// MARK: Inspector::BrowserDispatcherHandler methods.
+// MARK: Inspector::BidiBrowserDispatcherHandler methods.
 
 Inspector::Protocol::ErrorStringOr<void> WebDriverBidiProcessor::close()
 {
@@ -139,6 +142,35 @@ Inspector::Protocol::ErrorStringOr<void> WebDriverBidiProcessor::close()
 void WebDriverBidiProcessor::logEntryAdded(const String& level, const String& source, const String& message, double timestamp, const String& type, const String& method)
 {
     m_logDomainNotifier->entryAdded(level, source, message, timestamp, type, method);
+}
+
+// MARK: Inspector::BidiScriptDispatcherHandler methods.
+
+void WebDriverBidiProcessor::callFunction(const String& functionDeclaration, bool awaitPromise, Ref<JSON::Object>&& target, RefPtr<JSON::Array>&& arguments, std::optional<Protocol::BidiScript::EvaluateResultOwnership>&&, RefPtr<JSON::Object>&& opt_serializationOptions, RefPtr<JSON::Object>&& opt_this, std::optional<bool>&& opt_userActivation, CommandCallbackOf<Protocol::BidiScript::EvaluateResultType, String, RefPtr<Protocol::BidiScript::RemoteValue>, RefPtr<Protocol::BidiScript::ExceptionDetails>>&& callback)
+{
+    // FIXME: obtain `BrowsingContextHandle` from `target`.
+    // FIXME: handle `awaitPromise` option.
+    // FIXME: handle `evaluateResultOwnership` option.
+    // FIXME: handle `serializationOptions` option.
+    // FIXME: handle custom `this` option.
+    // FIXME: handle `userActivation` option.
+
+    RefPtr session = m_session.get();
+    if (!session)
+        ASYNC_FAIL_WITH_PREDEFINED_ERROR(InternalError);
+
+    std::optional<BrowsingContext> browsingContext = target->getString("context"_s);
+
+    Ref<JSON::Array> outArguments = JSON::Array::create();
+    if (arguments) {
+        for (auto argument : *arguments)
+            outArguments->pushValue(argument.copyRef());
+    }
+
+    session->evaluateJavaScriptFunction(browsingContext.value_or("junkpage"_s), "junkframe"_s, functionDeclaration, WTFMove(outArguments), false, opt_userActivation.value_or(false), std::nullopt, [callback = WTFMove(callback)](Inspector::CommandResult<String>&& result) {
+        auto resultType = result.has_value() ? Inspector::Protocol::BidiScript::EvaluateResultType::Success : Inspector::Protocol::BidiScript::EvaluateResultType::Exception;
+        callback({ { resultType, result.value_or("junkresult"_s), nullptr, nullptr } });
+    });
 }
 
 } // namespace WebKit

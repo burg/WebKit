@@ -1,0 +1,155 @@
+{
+    "domain": "BidiScript",
+    "exposedAs": "script",
+    "description": "The script module contains commands and events relating to script realms and execution.",
+    "condition": "ENABLE(WEBDRIVER_BIDI)",
+    "types": [
+        {
+            "id": "EvaluateResultType",
+            "type": "string",
+            "enum": [ "success", "exception" ]
+        },
+        {
+            "id": "EvaluateResultOwnership",
+            "type": "string",
+            "enum": [ "root", "none" ]
+        },
+        {
+            "id": "ExceptionDetails",
+            "type": "object",
+            "properties": [
+                { "name": "lineNumber", "type": "number"},
+                { "name": "columnNumber", "type": "number"},
+                { "name": "text", "type": "string" },
+                { "name": "exception", "$ref": "BidiScript.RemoteValue" },
+                { "name": "stackTrace", "$ref": "BidiScript.StackTrace" }
+            ]
+        },
+        {
+            "id": "Handle",
+            "type": "string"
+        },
+        {
+            "id": "InternalId",
+            "type": "string"
+        },
+        {
+            "id": "LocalValue",
+            "description": "Represents a value which can be deserialized into ECMAScript. This includes both primitive and non-primitive values as well as remote references and channels.",
+            "type": "object",
+            "properties": [
+                { "name": "type", "$ref": "BidiScript.LocalValueType" },
+                { "name": "value", "type": "any" }
+            ]
+        },
+        {
+            "id": "LocalValueType",
+            "type": "string",
+            "enum": [
+                "array",
+                "date",
+                "map",
+                "object",
+                "set"
+            ]
+        },
+        {
+            "id": "Realm",
+            "type": "string",
+            "description": "Unique identifier for a script realm. Defined at <https://tc39.es/ecma262/#realm>"
+        },
+        {
+            "id": "RemoteValue",
+            "type": "object",
+            "properties": [
+                { "name": "type", "$ref": "BidiScript.RemoteValueType" },
+                { "name": "value", "type": "any", "optional": true },
+                { "name": "handle", "$ref": "BidiScript.Handle", "optional": true },
+                { "name": "internalId", "$ref": "BidiScript.InternalId", "optional": true }
+            ]
+        },
+        {
+            "id": "RemoteValueType",
+            "type": "string",
+            "enum": [
+                "array",
+                "arraybuffer",
+                "date",
+                "error",
+                "function",
+                "htmlcollection",
+                "map",
+                "node",
+                "nodelist",
+                "object",
+                "promise",
+                "proxy",
+                "set",
+                "symbol",
+                "typedarray",
+                "weakmap",
+                "weakset",
+                "window"
+            ]
+        },
+        {
+            "id": "SerializationOptions",
+            "type": "object",
+            "properties": [
+                { "name": "maxDomDepth", "type": "number", "optional": true },
+                { "name": "maxObjectDepth", "type": "number", "optional": true },
+                { "name": "includesShadowTree", "type": "string", "enum": ["none", "open", "all"], "optional": true}
+            ]
+        },
+        {
+            "id": "StackTrace",
+            "type": "object",
+            "properties": [
+                { "name": "callFrames", "type": "array", "items": { "$ref": "BidiScript.StackFrame" } }
+            ]
+        },
+        {
+            "id": "StackFrame",
+            "type": "object",
+            "properties": [
+                { "name": "lineNumber", "type": "number" },
+                { "name": "columnNumber", "type": "number" },
+                { "name": "functionName", "type": "string" },
+                { "name": "url", "type": "string" }
+            ]
+        },
+        {
+            "id": "Target",
+            "type": "object",
+            "description": "A type that represents a place to evaluate JavaScript. It is either a BrowsingContext or a Realm.",
+            "properties": [
+                { "name": "realm", "$ref": "BidiScript.Realm", "optional": true },
+                { "name": "context", "$ref": "BidiBrowsingContext.BrowsingContext", "optional": true },
+                { "name": "value", "type": "any" }
+            ]
+        }
+    ],
+    "commands": [
+        {
+            "name": "callFunction",
+            "description": "Calls a provided function with given arguments in a given realm.",
+            "async": true,
+            "parameters": [
+                { "name": "functionDeclaration", "type": "string" },
+                { "name": "awaitPromise", "type": "boolean" },
+                { "name": "target", "$ref": "BidiScript.Target" },
+                { "name": "arguments", "type": "array", "items": { "$ref": "BidiScript.LocalValue" }, "optional": true },
+                { "name": "resultOwnership", "$ref": "BidiScript.EvaluateResultOwnership", "optional": true },
+                { "name": "serializationOptions", "$ref": "BidiScript.SerializationOptions", "optional": true },
+                { "name": "this", "$ref": "BidiScript.LocalValue", "optional": true },
+                { "name": "userActivation", "type": "boolean", "optional": true }
+            ],
+            "returns": [
+                { "name": "type", "$ref": "BidiScript.EvaluateResultType" },
+                { "name": "realm", "$ref": "BidiScript.Realm" },
+                { "name": "result", "$ref": "BidiScript.RemoteValue", "optional": true },
+                { "name": "exceptionDetails", "$ref": "BidiScript.ExceptionDetails", "optional": true }
+            ]
+        }
+    ]
+}
